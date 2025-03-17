@@ -841,6 +841,7 @@
 				content: m.content,
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp,
+				...(m.usage ? { usage: m.usage } : {}),
 				...(m.sources ? { sources: m.sources } : {})
 			})),
 			model_item: $models.find((m) => m.id === modelId),
@@ -1278,7 +1279,9 @@
 		const chatInputElement = document.getElementById('chat-input');
 
 		if (chatInputElement) {
+			await tick();
 			chatInputElement.style.height = '';
+			chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 320) + 'px';
 		}
 
 		const _files = JSON.parse(JSON.stringify(files));
@@ -1934,9 +1937,33 @@
 
 		<PaneGroup direction="horizontal" class="w-full h-full">
 			<Pane defaultSize={50} class="h-full flex w-full relative">
-				{#if $banners.length > 0 && !history.currentId && !$chatId && selectedModels.length <= 1}
+				{#if !history.currentId && !$chatId && selectedModels.length <= 1 && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
 					<div class="absolute top-12 left-0 right-0 w-full z-30">
 						<div class=" flex flex-col gap-1 w-full">
+							{#if ($config?.license_metadata?.type ?? null) === 'trial'}
+								<Banner
+									banner={{
+										type: 'info',
+										title: 'Trial License',
+										content: $i18n.t(
+											'You are currently using a trial license. Please contact support to upgrade your license.'
+										)
+									}}
+								/>
+							{/if}
+
+							{#if ($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats}
+								<Banner
+									banner={{
+										type: 'error',
+										title: 'License Error',
+										content: $i18n.t(
+											'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
+										)
+									}}
+								/>
+							{/if}
+
 							{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
 								<Banner
 									{banner}
